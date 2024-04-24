@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { InitService } from './Services';
+import { StatusBar } from '@capacitor/status-bar';
 
 @Component({
   selector: 'app-root',
@@ -6,5 +8,17 @@ import { Component } from '@angular/core';
   styleUrls: ['app.component.scss'],
 })
 export class AppComponent {
-  constructor() {}
+  constructor(public initService: InitService) {
+    this.initService.platform.ready().then(async () => {
+      if (
+        this.initService.platform.is('cordova') ||
+        this.initService.platform.is('capacitor')
+      ) {
+        StatusBar.setBackgroundColor({
+          color: '#27A757',
+        });
+      }
+      this.initService.navCtrl.navigateRoot(['intro']);
+    });
+  }
 }

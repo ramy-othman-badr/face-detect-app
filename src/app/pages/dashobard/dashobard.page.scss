@@ -1,0 +1,28 @@
+.video-wrapper {
+
+    .video-container {
+        width: 350px;
+        height: 260px;
+        margin: auto;
+        position: relative;
+
+        video {
+            width: 100% !important;
+            height: 100% !important;
+        }
+    }
+}
+
+.btns {
+    margin-bottom: 30px;
+}
+
+ion-footer {
+    padding: 15px;
+}
+
+ion-button {
+    height: 56px;
+    --border-radius: 15px;
+    text-transform: capitalize;
+}

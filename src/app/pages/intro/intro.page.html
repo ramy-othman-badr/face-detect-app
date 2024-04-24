@@ -1,0 +1,46 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Register Page</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+
+  <div class="ion-padding">
+
+    <div class="btns">
+
+      <ion-row>
+        <ion-col size="12" *ngIf="!stream_started">
+          <ion-button color="secondary" expand="block" (click)="detectFace()" [disabled]="!modals_loaded">
+            Register Face
+          </ion-button>
+        </ion-col>
+
+        <ion-col size="12" *ngIf="stream_started">
+          <ion-button expand="block" (click)="stopFaceRecognition()">
+            end
+          </ion-button>
+        </ion-col>
+      </ion-row>
+
+    </div>
+
+
+
+    <div class="video-wrapper">
+      <div class="video-container">
+        <video #video [width]="WIDTH" [height]="HEIGHT" autoplay muted>
+        </video>
+        <div id="canvas"></div>
+      </div>
+    </div>
+
+  </div>
+
+
+</ion-content>
+<ion-footer *ngIf="initService.labeledFaceDescriptors.length > 0">
+  <ion-button expand="block" (click)="authenticateFace()">
+    Authenticate
+  </ion-button>
+</ion-footer>
