@@ -1,48 +1,48 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Authenticate Page</ion-title>
+      <ion-title>Authenticate Page</ion-title>
   </ion-toolbar>
 </ion-header>
 <ion-content>
 
   <div class="ion-padding">
 
-    <div class="btns">
+      <div class="btns">
 
-      <ion-row>
-        <ion-col size="12" *ngIf="!stream_started">
-          <ion-button expand="block" (click)="detectFace()" [disabled]="!modals_loaded">
-            Authenticate
-          </ion-button>
-        </ion-col>
+          <ion-row>
+              <ion-col size="12" *ngIf="!stream_started">
+                  <ion-button expand="block" (click)="detectFace()" [disabled]="!modals_loaded">
+                      Authenticate
+                  </ion-button>
+              </ion-col>
 
-        <ion-col size="12" *ngIf="stream_started">
-          <ion-button expand="block" (click)="stopFaceRecognition()">
-            end
-          </ion-button>
-        </ion-col>
-      </ion-row>
+              <ion-col size="12" *ngIf="stream_started">
+                  <ion-button expand="block" (click)="stopFaceRecognition()">
+                      end
+                  </ion-button>
+              </ion-col>
+          </ion-row>
 
-    </div>
-
-
-
-    <div class="video-wrapper">
-      <div class="video-container">
-        <video #video [width]="WIDTH" [height]="HEIGHT" autoplay muted>
-        </video>
-        <div id="canvas"></div>
       </div>
-    </div>
 
-    <br>
-    <div *ngIf="initService.labeledFaceDescriptors.length != 0">
-      <ion-item lines="none" *ngFor="let item of initService.labeledFaceDescriptors">
-        <ion-label>
-          {{item._label}}
-        </ion-label>
-      </ion-item>
-    </div>
+
+
+      <div class="video-wrapper">
+          <div class="video-container">
+              <video #video [width]="WIDTH" [height]="HEIGHT" autoplay muted>
+              </video>
+              <div id="canvas"></div>
+          </div>
+      </div>
+
+      <br>
+      <div *ngIf="initService.labeledFaceDescriptors.length != 0">
+          <ion-item lines="none" *ngFor="let item of initService.labeledFaceDescriptors">
+              <ion-label>
+                  {{item._label}}
+              </ion-label>
+          </ion-item>
+      </div>
 
 
 
@@ -51,7 +51,7 @@
 
 </ion-content>
 <!-- <ion-footer>
-  <ion-button color="secondary" expand="block" (click)="registerFace()">
-    Register Face
-  </ion-button>
+<ion-button color="secondary" expand="block" (click)="registerFace()">
+  Register Face
+</ion-button>
 </ion-footer> -->

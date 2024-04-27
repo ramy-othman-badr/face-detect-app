@@ -16,13 +16,17 @@ export class IntroPage implements OnInit {
   HEIGHT = 280;
   @ViewChild('video', { static: true })
   public video: ElementRef;
-  @ViewChild('canvas', { static: true })
-  canvas: any
   videoInput: any;
   faceDetectionInterval
+  @ViewChild('canvas', { static: true })
+  canvas: any
 
   modals_loaded = false
   stream_started = false
+
+
+  videoElement
+
 
   constructor(private elRef: ElementRef, public initService: InitService) { }
 
@@ -37,7 +41,6 @@ export class IntroPage implements OnInit {
 
   async loadFaceDetectionModels() {
     await Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri('assets/models'),
       faceapi.nets.tinyFaceDetector.loadFromUri('assets/models'),
       faceapi.nets.faceLandmark68Net.loadFromUri('assets/models'),
       faceapi.nets.faceRecognitionNet.loadFromUri('assets/models'),
@@ -52,7 +55,8 @@ export class IntroPage implements OnInit {
 
 
 
-
+  previousLandmarks;
+  movementThreshold = 0.1
 
 
   async detectFace() {
@@ -66,11 +70,13 @@ export class IntroPage implements OnInit {
       this.stream_started = true
     })
 
-    var videoElement = this.elRef.nativeElement.querySelector('video');
-
-    videoElement.addEventListener('play', async () => {
+    this.videoElement = this.elRef.nativeElement.querySelector('video');
+    this.videoElement.addEventListener('play', async () => {
       if (!this.canvas) {
         this.canvas = await faceapi.createCanvas(this.videoInput);
+      }
+      if (this.faceDetectionInterval) {
+        clearInterval(this.faceDetectionInterval);
       }
 
       document.getElementById('canvas').appendChild(this.canvas);
@@ -80,47 +86,72 @@ export class IntroPage implements OnInit {
         width: this.videoInput.width,
         height: this.videoInput.height,
       };
-
       faceapi.matchDimensions(this.canvas, displaySize);
+
+
       this.faceDetectionInterval = setInterval(async () => {
-
         try {
-
-          var detection: any = await faceapi
-            .detectSingleFace(this.videoInput, new faceapi.TinyFaceDetectorOptions({
-              inputSize: 256
-            })).withFaceLandmarks().withFaceDescriptor().withFaceExpressions()
-
-
+          var detection: any = await faceapi.detectSingleFace(this.videoInput, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor().withFaceExpressions()
           var resizedDetections = faceapi.resizeResults(detection, displaySize);
-
           if (detection) {
             let expressions = detection.expressions
             let landmarkPositions = detection._positions
             let faceDescriptor = detection.descriptor;
             let faceLandmarks = detection.landmarks;
+            // console.log(faceLandmarks)
+            // this.registerNewFace(faceDescriptor)
+            // this.stopFaceRecognition()
 
-            this.registerNewFace(faceDescriptor)
+            const leftEye = faceLandmarks.getLeftEye();
+  const rightEye = faceLandmarks.getRightEye();
 
+
+
+            console.log(leftEye)
+            /* if (this.previousLandmarks) {
+              const movementDetected = this.hasMovement(this.previousLandmarks, faceLandmarks, this.movementThreshold);
+              // Adjust movementThreshold dynamically based on recent movement history
+                console.log(this.movementThreshold);
+                if (movementDetected) {
+                // Decrease threshold for more sensitivity
+                // this.movementThreshold = Math.max(this.movementThreshold - 1, 1);
+                console.log("Movement detected:", movementDetected);
+              } else {
+                // Increase threshold for less sensitivity
+                this.movementThreshold = Math.min(this.movementThreshold + 0.1, 300); // Adjust upper limit as needed
+              }
+            }
+            this.previousLandmarks = faceLandmarks; */
+
+          } else {
+            // No face detected, you can add logic here if needed
           }
 
           this.canvas.getContext('2d').clearRect(0, 0, this.canvas.width, this.canvas.height);
           faceapi.draw.drawDetections(this.canvas, resizedDetections);
           faceapi.draw.drawFaceLandmarks(this.canvas, resizedDetections);
           faceapi.draw.drawFaceExpressions(this.canvas, resizedDetections);
-
         } catch (error) {
         }
-
-      }, 1000);
-    });
-
-    videoElement.addEventListener('ended', () => {
-      this.stopFaceRecognition();
-      stream.getTracks().forEach(track => track.stop());
-      this.stream_started = false
+      }, 100);
     });
   }
+
+
+
+  hasMovement(prevLandmarks, currLandmarks, threshold) {
+    let totalMovement = 0;
+    for (let i = 0; i < prevLandmarks.length; i++) {
+      const dx = currLandmarks[i].x - prevLandmarks[i].x;
+      const dy = currLandmarks[i].y - prevLandmarks[i].y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      totalMovement += distance;
+    }
+    const averageMovement = totalMovement / prevLandmarks.length;
+    return averageMovement > threshold;
+  }
+
+
 
 
   registerNewFace(faceDescriptor) {
@@ -129,16 +160,11 @@ export class IntroPage implements OnInit {
       var bestMatch: any = faceMatcher.findBestMatch(faceDescriptor);
       if (bestMatch._label === 'unknown') {
         this.initService.labeledFaceDescriptors.push(new faceapi.LabeledFaceDescriptors('Ramy Othman', [faceDescriptor]));
-        this.stopFaceRecognition()
-      } else {
-        this.stopFaceRecognition()
       }
     } else {
       this.initService.labeledFaceDescriptors.push(new faceapi.LabeledFaceDescriptors('Ramy Othman', [faceDescriptor]));
-      this.stopFaceRecognition()
     }
   }
-
 
 
 
@@ -147,30 +173,24 @@ export class IntroPage implements OnInit {
       clearInterval(this.faceDetectionInterval);
       this.faceDetectionInterval = null;
     }
-
-    // Remove canvas element from DOM
     if (document.getElementById('canvass')) {
       document.querySelectorAll('#canvass').forEach(elm => {
         elm.remove()
       });
     }
 
-
-    // Dispose face-api.js models and other cleanup steps
     this.stream_started = false
-    this.stopVideoStream()
-  }
-
-
-  async stopVideoStream() {
-    const videoElement = this.video.nativeElement;
-    const stream = videoElement.srcObject as MediaStream;
+    const stream = this.video.nativeElement.srcObject as MediaStream;
     if (stream) {
       const tracks = stream.getTracks();
       tracks.forEach(track => track.stop());
-      videoElement.srcObject = null;
+      this.video.nativeElement.srcObject = null;
     }
+    this.videoElement.removeEventListener('play', this.handlePlay); // Remove 'play' event listener
   }
 
+  handlePlay = async () => {
+
+  };
 
 }

@@ -1,9 +1,9 @@
 import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { NavController } from '@ionic/angular';
 
 import * as faceapi from 'face-api.js';
 
 import { PermissionStatus, SpeechRecognition } from '@capacitor-community/speech-recognition'
-import { NavController } from '@ionic/angular';
 import { InitService } from 'src/app/Services';
 
 @Component({
@@ -17,13 +17,16 @@ export class DashobardPage implements OnInit {
   HEIGHT = 280;
   @ViewChild('video', { static: true })
   public video: ElementRef;
-  @ViewChild('canvas', { static: true })
-  canvas: any
   videoInput: any;
   faceDetectionInterval
+  @ViewChild('canvas', { static: true })
+  canvas: any
 
   modals_loaded = false
   stream_started = false
+
+  videoElement
+
 
   constructor(private elRef: ElementRef, public initService: InitService) { }
 
@@ -56,8 +59,8 @@ export class DashobardPage implements OnInit {
 
 
   async detectFace() {
-    /* SpeechRecognition.requestPermissions().then(async (permission: PermissionStatus) => {
-      if (permission.speechRecognition) { */
+    SpeechRecognition.requestPermissions().then(async (permission: PermissionStatus) => {
+      if (permission.speechRecognition) {
         this.videoInput = this.video.nativeElement;
         const videoOptions = {
           video: {},
@@ -68,75 +71,61 @@ export class DashobardPage implements OnInit {
           this.stream_started = true
         })
 
-        var videoElement = this.elRef.nativeElement.querySelector('video');
-
-        videoElement.addEventListener('play', async () => {
+        this.videoElement = this.elRef.nativeElement.querySelector('video');
+        this.videoElement.addEventListener('play', async () => {
           if (!this.canvas) {
-            // this.canvas = await faceapi.createCanvas(this.videoInput);
+            this.canvas = await faceapi.createCanvas(this.videoInput);
+          }
+          if (this.faceDetectionInterval) {
+            clearInterval(this.faceDetectionInterval);
           }
 
-          /* document.getElementById('canvas').appendChild(this.canvas);
+          document.getElementById('canvas').appendChild(this.canvas);
           this.canvas.setAttribute('id', 'canvass');
           this.canvas.setAttribute('style', `top: 0;left: 0;`);
           var displaySize = {
             width: this.videoInput.width,
             height: this.videoInput.height,
-          }; */
+          };
+          faceapi.matchDimensions(this.canvas, displaySize);
 
-          // faceapi.matchDimensions(this.canvas, displaySize);
           this.faceDetectionInterval = setInterval(async () => {
-
             try {
+              var detection: any = await faceapi.detectSingleFace(this.videoInput, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor().withFaceExpressions()
 
-              var detection: any = await faceapi
-                .detectSingleFace(this.videoInput, new faceapi.TinyFaceDetectorOptions({
-                  inputSize: 256
-                })).withFaceLandmarks().withFaceDescriptor().withFaceExpressions()
+              var resizedDetections = faceapi.resizeResults(detection, displaySize);
 
-
-              // var resizedDetections = faceapi.resizeResults(detection, displaySize);
 
               if (detection) {
-                let expressions = detection.expressions
-                let landmarkPositions = detection._positions
-                let faceDescriptor = detection.descriptor;
-                let faceLandmarks = detection.landmarks;
-
-                this.matchFace(faceDescriptor)
+                this.matchFace(detection.descriptor)
+                this.stopFaceRecognition()
+              } else {
+                // No face detected, you can add logic here if needed
               }
 
-              /* this.canvas.getContext('2d').clearRect(0, 0, this.canvas.width, this.canvas.height);
+              this.canvas.getContext('2d').clearRect(0, 0, this.canvas.width, this.canvas.height);
               faceapi.draw.drawDetections(this.canvas, resizedDetections);
               faceapi.draw.drawFaceLandmarks(this.canvas, resizedDetections);
-              faceapi.draw.drawFaceExpressions(this.canvas, resizedDetections); */
+              faceapi.draw.drawFaceExpressions(this.canvas, resizedDetections);
+
 
             } catch (error) {
+              console.error('Face detection error:', error);
             }
-
-          }, 5000);
+          }, 500);
         });
-
-        videoElement.addEventListener('ended', () => {
-          this.stopFaceRecognition();
-          stream.getTracks().forEach(track => track.stop());
-          this.stream_started = false
-        });
-    /*   }
-    }) */
+      }
+    })
   }
 
 
   matchFace(faceDescriptor) {
     var faceMatcher = new faceapi.FaceMatcher(this.initService.labeledFaceDescriptors);
     var bestMatch: any = faceMatcher.findBestMatch(faceDescriptor);
-    console.log('line 151')
-    console.log(bestMatch)
     if (bestMatch._label === 'unknown') {
-      alert('Face not recognized');
-      this.stopFaceRecognition()
+      this.initService.presentToast('Face not recognized');
     } else {
-      // this.startAudio()
-      this.stopFaceRecognition()
+      this.startAudio()
     }
   }
 
@@ -177,29 +166,27 @@ export class DashobardPage implements OnInit {
       this.faceDetectionInterval = null;
     }
 
-    // Remove canvas element from DOM
     if (document.getElementById('canvass')) {
       document.querySelectorAll('#canvass').forEach(elm => {
         elm.remove()
       });
     }
 
-
-    // Dispose face-api.js models and other cleanup steps
     this.stream_started = false
-    this.stopVideoStream()
-  }
-
-
-  async stopVideoStream() {
-    const videoElement = this.video.nativeElement;
-    const stream = videoElement.srcObject as MediaStream;
+    const stream = this.video.nativeElement.srcObject as MediaStream;
     if (stream) {
       const tracks = stream.getTracks();
       tracks.forEach(track => track.stop());
-      videoElement.srcObject = null;
+      this.video.nativeElement.srcObject = null;
     }
+    this.videoElement.removeEventListener('play', this.handlePlay); // Remove 'play' event listener
+
   }
+
+  handlePlay = async () => {
+
+  };
+
 
 
 }
